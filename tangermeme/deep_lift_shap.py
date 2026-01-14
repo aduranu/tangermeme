@@ -220,7 +220,7 @@ def _maxpool(module, grad_input, grad_output):
 
 def deep_lift_shap(model, X, args=None, target=0,  batch_size=32,
 	references=dinucleotide_shuffle, n_shuffles=20, return_references=False,
-	hypothetical=False, gradient_correction=False, warning_threshold=0.001,
+	hypothetical=False, gradient_correction=True, warning_threshold=0.001,
 	additional_nonlinear_ops=None, print_convergence_deltas=False,
 	raw_outputs=False, dtype=None, device='cuda', random_state=None,
 	verbose=False):
