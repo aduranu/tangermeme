@@ -219,10 +219,11 @@ def _maxpool(module, grad_input, grad_output):
 
 
 def deep_lift_shap(model, X, args=None, target=0,  batch_size=32,
-	references=dinucleotide_shuffle, n_shuffles=20, return_references=False, 
-	hypothetical=False, warning_threshold=0.001, additional_nonlinear_ops=None,
-	print_convergence_deltas=False, raw_outputs=False, dtype=None, device='cuda',
-	random_state=None, verbose=False):
+	references=dinucleotide_shuffle, n_shuffles=20, return_references=False,
+	hypothetical=False, gradient_correction=False, warning_threshold=0.001,
+	additional_nonlinear_ops=None, print_convergence_deltas=False,
+	raw_outputs=False, dtype=None, device='cuda', random_state=None,
+	verbose=False):
 	"""Calculate attributions for a set of sequences using DeepLIFT/SHAP.
 
 	This function will calculate the DeepLIFT/SHAP attributions on a set of
@@ -307,6 +308,13 @@ def deep_lift_shap(model, X, args=None, target=0,  batch_size=32,
 		position or only for the character that is actually at the sequence.
 		Practically, whether to return the returned attributions from captum
 		with the one-hot encoded sequence. Default is False.
+
+	gradient_correction: bool, optional
+		Whether to apply gradient correction by subtracting the mean gradient
+		across the alphabet dimension. This removes the unreliable orthogonal
+		component for one-hot encoded categorical inputs. For DNA (A=4), this
+		subtracts the mean of the 4 nucleotide gradients at each position.
+		Default is False.
 
 	warning_threshold: float, optional
 		A threshold on the convergence delta that will always raise a warning
@@ -486,6 +494,10 @@ def deep_lift_shap(model, X, args=None, target=0,  batch_size=32,
 			except Exception as e:
 				model.apply(_clear_hooks)
 				raise(e)
+
+			# Apply gradient correction by subtracting mean across alphabet dim
+			if gradient_correction:
+				multipliers = multipliers - multipliers.mean(dim=1, keepdim=True)
 
 			# If not returning the raw multipliers then apply the correction for
 			# character encodings
