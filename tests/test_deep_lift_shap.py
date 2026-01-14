@@ -273,6 +273,36 @@ def test_deep_lift_shap_hypothetical(X):
           -0.0032,  0.0031, -0.0088]]], 4)
 
 
+def test_deep_lift_shap_gradient_correction(X):
+	torch.manual_seed(0)
+	model = FlattenDense(n_outputs=1)
+
+	# Test that gradient correction produces different results
+	X_attr_no_corr = deep_lift_shap(model, X[:4], device='cpu', random_state=0,
+		gradient_correction=False)
+	X_attr_corr = deep_lift_shap(model, X[:4], device='cpu', random_state=0,
+		gradient_correction=True)
+
+	assert X_attr_corr.shape == X[:4].shape
+	assert X_attr_corr.dtype == torch.float32
+
+	# Results should be different with gradient correction
+	assert_raises(AssertionError, assert_array_almost_equal,
+		X_attr_no_corr, X_attr_corr)
+
+	# Test with raw outputs to verify mean is ~0 across alphabet dimension
+	X_attr_raw = deep_lift_shap(model, X[:4], device='cpu', random_state=0,
+		gradient_correction=True, raw_outputs=True)
+
+	# Shape should be (n_examples, n_shuffles, alphabet_size, length)
+	assert X_attr_raw.shape == (4, 20, 4, 100)
+
+	# Mean across alphabet dimension (dim=2) should be ~0 for corrected gradients
+	mean_across_alphabet = X_attr_raw.mean(dim=2)
+	assert_array_almost_equal(mean_across_alphabet,
+		torch.zeros_like(mean_across_alphabet), 5)
+
+
 def test_deep_lift_shap_independence(X):
 	torch.manual_seed(0)
 	model = FlattenDense(n_outputs=1)
